@@ -11,7 +11,7 @@ foreach (glob(__DIR__ . '/controllers/*.php') ?: [] as $controllerFile) {
 header('X-Robots-Tag: noindex, nofollow');
 
 $method = request_method();
-$uri = parse_url($_SERVER['REQUEST_URI'] ?? '/admin', PHP_URL_PATH) ?: '/admin';
+$uri = request_path();
 $path = preg_replace('#^/admin#', '', $uri) ?? '';
 $path = '/' . trim($path, '/');
 if ($path === '/') {

@@ -40,12 +40,82 @@ function e(mixed $value): string
     return htmlspecialchars((string) $value, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
 }
 
+function app_base(): string
+{
+    static $base = null;
+    if ($base !== null) {
+        return $base;
+    }
+    $configured = trim((string) env('APP_BASE', ''), '/');
+    if ($configured === '') {
+        $urlPath = parse_url((string) config('app.url'), PHP_URL_PATH) ?: '';
+        $configured = trim((string) $urlPath, '/');
+    }
+    if ($configured === '') {
+        $script = str_replace('\\', '/', (string) ($_SERVER['SCRIPT_NAME'] ?? ''));
+        if (preg_match('#^(.*)/(?:index|admin/index|api/[a-z0-9_-]+)\.php$#', $script, $matches)) {
+            $configured = trim($matches[1], '/');
+        }
+    }
+    $base = $configured === '' ? '' : '/' . $configured;
+    return $base;
+}
+
+function href(string $path = '/'): string
+{
+    if (preg_match('#^https?://#i', $path)) {
+        return $path;
+    }
+    $base = app_base();
+    $hash = '';
+    $query = '';
+    if (str_contains($path, '#')) {
+        [$path, $hash] = explode('#', $path, 2);
+        $hash = '#' . $hash;
+    }
+    if (str_contains($path, '?')) {
+        [$path, $query] = explode('?', $path, 2);
+        $query = '?' . $query;
+    }
+    if ($base !== '' && ($path === $base || str_starts_with($path, $base . '/'))) {
+        return $path . $hash . $query;
+    }
+    if ($path === '' || $path === '/') {
+        return ($base === '' ? '/' : $base . '/') . $hash . $query;
+    }
+    return $base . '/' . ltrim($path, '/') . $hash . $query;
+}
+
+function prefix_html_urls(string $html): string
+{
+    $base = app_base();
+    if ($base === '' || $html === '') {
+        return $html;
+    }
+    $folder = preg_quote(ltrim($base, '/'), '#');
+    $updated = preg_replace(
+        '#(\s(?:href|action|src)=(["\']))/(?!' . $folder . '/|/)#i',
+        '$1' . $base . '/',
+        $html
+    );
+    return is_string($updated) ? $updated : $html;
+}
+
 function url(string $path = ''): string
 {
     if (preg_match('#^https?://#i', $path)) {
         return $path;
     }
-    return rtrim((string) config('app.url'), '/') . '/' . ltrim($path, '/');
+    $root = rtrim((string) config('app.url'), '/');
+    $base = app_base();
+    $rootPath = parse_url($root, PHP_URL_PATH) ?: '';
+    if ($base !== '' && rtrim((string) $rootPath, '/') !== $base) {
+        $root .= $base;
+    }
+    if ($path === '' || $path === '/') {
+        return $root . '/';
+    }
+    return $root . '/' . ltrim($path, '/');
 }
 
 function asset(string $path): string
@@ -58,6 +128,9 @@ function asset(string $path): string
 
 function redirect(string $to, int $code = 302): never
 {
+    if (!preg_match('#^https?://#i', $to)) {
+        $to = href($to);
+    }
     header('Location: ' . $to, true, $code);
     exit;
 }
@@ -313,13 +386,21 @@ function page_url(string $base, int $page, array $query = []): string
     return $path;
 }
 
-function current_path(): string
+function request_path(): string
 {
     $path = parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH) ?: '/';
-    if ($path !== '/') {
-        $path = rtrim($path, '/') ?: '/';
+    $path = rawurldecode($path);
+    $base = app_base();
+    if ($base !== '' && ($path === $base || str_starts_with($path, $base . '/'))) {
+        $path = substr($path, strlen($base)) ?: '/';
     }
-    return $path;
+    $path = '/' . trim($path, '/');
+    return $path === '//' ? '/' : $path;
+}
+
+function current_path(): string
+{
+    return request_path();
 }
 
 function nav_active(string $path): string

@@ -5,7 +5,10 @@ declare(strict_types=1);
 function admin_user(): array
 {
     if (!Auth::check()) {
-        $next = $_SERVER['REQUEST_URI'] ?? '/admin';
+        $next = request_path();
+        if (!empty($_SERVER['QUERY_STRING'])) {
+            $next .= '?' . $_SERVER['QUERY_STRING'];
+        }
         redirect('/login?next=' . rawurlencode($next));
     }
     if (!Auth::can('dashboard')) {

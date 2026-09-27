@@ -2,6 +2,8 @@
     'use strict';
 
     const csrf = document.querySelector('meta[name="csrf-token"]')?.content || '';
+    const appBase = document.querySelector('meta[name="app-base"]')?.content || '';
+    const withBase = (path) => (!appBase || path === appBase || path.startsWith(appBase + '/')) ? path : appBase + path;
 
     function toast(message, type) {
         if (!message) return;
@@ -62,7 +64,7 @@
                 if (suggest) suggest.innerHTML = '';
                 return;
             }
-            const response = await fetch('/api/search.php?q=' + encodeURIComponent(q));
+            const response = await fetch(withBase('/api/search.php') + '?q=' + encodeURIComponent(q));
             const data = await response.json();
             suggest.innerHTML = '';
             (data.results || []).forEach((item) => {
@@ -84,7 +86,7 @@
             const note = form.querySelector('[data-newsletter-note]');
             const body = new FormData(form);
             try {
-                const response = await fetch('/api/newsletter.php', {
+                const response = await fetch(withBase('/api/newsletter.php'), {
                     method: 'POST',
                     headers: { 'X-CSRF-TOKEN': csrf, 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' },
                     body
@@ -144,7 +146,7 @@
         onScroll();
         const id = article.dataset.postId;
         if (id) {
-            fetch('/api/views.php', {
+            fetch(withBase('/api/views.php'), {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrf },
                 body: JSON.stringify({ post_id: Number(id) })

@@ -125,3 +125,20 @@ try {
 } catch (Throwable $e) {
     Logger::exception($e);
 }
+
+ob_start();
+register_shutdown_function(static function (): void {
+    $html = ob_get_clean();
+    if (!is_string($html) || $html === '') {
+        return;
+    }
+    $type = '';
+    foreach (headers_list() as $header) {
+        if (stripos($header, 'Content-Type:') === 0) {
+            $type = strtolower($header);
+            break;
+        }
+    }
+    $isHtml = str_contains($type, 'text/html') || ($type === '' && preg_match('/^\s*</', $html) === 1);
+    echo $isHtml ? prefix_html_urls($html) : $html;
+});

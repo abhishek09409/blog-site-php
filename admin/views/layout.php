@@ -29,6 +29,7 @@ $error = flash('error');
     <title><?= e($title) ?> — Newsroom</title>
     <meta name="robots" content="noindex,nofollow">
     <meta name="csrf-token" content="<?= e(Csrf::token()) ?>">
+    <meta name="app-base" content="<?= e(app_base()) ?>">
     <link rel="icon" href="<?= e(media_src(setting('favicon', 'assets/images/favicon.svg'))) ?>">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
